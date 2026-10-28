@@ -1,0 +1,23 @@
+services:
+  telemetry:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/data
+  caddy:
+    image: caddy:2.10.0
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file: .env
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - telemetry
+volumes:
+  caddy_data:
+  caddy_config:

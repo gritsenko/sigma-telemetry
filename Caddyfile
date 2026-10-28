@@ -1,0 +1,7 @@
+{$DOMAIN} {
+	encode gzip
+	request_body {
+		max_size 32KB
+	}
+	reverse_proxy telemetry:8000
+}
