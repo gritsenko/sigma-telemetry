@@ -29,20 +29,46 @@
 
 `at` — миллисекунды от загрузки страницы. Имена событий приводятся к `[a-z0-9_]{1,64}`.
 
-## Развёртывание на виртуалке
+## Развёртывание
 
-1. DNS: A-запись поддомена `sigmastat.gritsenko.biz` на внешний IP виртуалки. Открыть порты 80 и 443.
-2. На виртуалке:
+Сначала DNS: A-запись `sigmastat.gritsenko.biz` на внешний IP. Порты 80 и 443 должны доходить до машины с Caddy: если контейнер за NAT хоста, пробросьте их. Через порт 80 Caddy получает сертификат.
+
+### LXC-контейнер (Debian/Ubuntu, без Docker)
+
+```bash
+git clone https://github.com/gritsenko/sigma-telemetry.git /opt/sigma-telemetry
+/opt/sigma-telemetry/deploy/install.sh        # от root
+cat /etc/sigma-telemetry.env                  # STATS_TOKEN для чтения статистики
+curl https://sigmastat.gritsenko.biz/health   # {"ok":true}
+```
+
+Скрипт ставит `python3-venv`, `caddy` и `sqlite3`, заводит пользователя `sigmastat` и venv в `/opt/sigma-telemetry/.venv`. Затем поднимает systemd-сервис `sigma-telemetry` на `127.0.0.1:8000` и добавляет сайт в `/etc/caddy/Caddyfile`.
+
+- База: `/var/lib/sigma-telemetry/telemetry.db`.
+- Настройки: `/etc/sigma-telemetry.env`; после правки — `systemctl restart sigma-telemetry`.
+- Логи: `journalctl -u sigma-telemetry -f`.
+- Обновление: `cd /opt/sigma-telemetry && git pull && deploy/install.sh`.
+- Другой домен: `DOMAIN=… deploy/install.sh`.
+
+Если TLS уже снимает reverse proxy на хосте, Caddy в контейнере не нужен: направьте прокси на `<IP контейнера>:8000`. Сервис по умолчанию слушает только 127.0.0.1, поэтому поменяйте `--host` в unit-файле. И передавайте `X-Forwarded-For`: по нему считается лимит частоты.
+
+### Docker
+
+Внутри LXC Docker работает только с включённым nesting (в Proxmox: `features: nesting=1,keyctl=1`).
+
+1. На машине:
    ```bash
-   git clone <repo> sigma-telemetry && cd sigma-telemetry
+   git clone https://github.com/gritsenko/sigma-telemetry.git && cd sigma-telemetry
    cp .env.example .env    # DOMAIN, ALLOWED_ORIGINS, STATS_TOKEN (openssl rand -hex 24)
    docker compose up -d --build
    curl https://$DOMAIN/health   # {"ok":true}
    ```
    Caddy сам получит сертификат Let's Encrypt. База лежит в `./data/telemetry.db`, бэкап — копия этого файла (лучше `sqlite3 data/telemetry.db ".backup b.db"`).
-3. В игре: `createTelemetry({ endpoint: 'https://sigmastat.gritsenko.biz/e', build })`.
+2. Обновление: `git pull && docker compose up -d --build`.
 
-Обновление: `git pull && docker compose up -d --build`.
+### В игре
+
+`createTelemetry({ endpoint: 'https://sigmastat.gritsenko.biz/e', build })`.
 
 ## Чтение статистики
 

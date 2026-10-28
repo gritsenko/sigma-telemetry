@@ -1,0 +1,22 @@
+[Unit]
+Description=Sigma telemetry collector
+After=network.target
+
+[Service]
+User=sigmastat
+Group=sigmastat
+WorkingDirectory=/opt/sigma-telemetry/server
+EnvironmentFile=/etc/sigma-telemetry.env
+Environment=DB_PATH=/var/lib/sigma-telemetry/telemetry.db TRUST_PROXY=1
+# One worker: the app keeps one SQLite connection and an in-memory rate limiter.
+ExecStart=/opt/sigma-telemetry/.venv/bin/uvicorn app:app --host 127.0.0.1 --port 8000 --workers 1 --no-server-header
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sigma-telemetry
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
