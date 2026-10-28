@@ -150,8 +150,8 @@ export function createTelemetry(o: TelemetryOptions): Telemetry {
     if (document.visibilityState === 'hidden') void flush();
   });
   // A page restored from the bfcache goes on as a new beat of the same session.
-  addEventListener('pagehide', finish);
-  addEventListener('pageshow', (e) => {
+  window.addEventListener('pagehide', finish);
+  window.addEventListener('pageshow', (e: PageTransitionEvent) => {
     if (e.persisted) ended = false;
   });
 
